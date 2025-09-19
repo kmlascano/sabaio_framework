@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sabaio_frameworki"
+version = "0.0.1"
+description = "sabaio framework evals through github"
+authors = [{ name = "Khrizelle Lascano", email = "khrizelle@legalcomplex.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/kmlascano/sabaio_framework.git"
