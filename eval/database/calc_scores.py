@@ -1,7 +1,7 @@
 from difflib import SequenceMatcher
 from collections import defaultdict
 
-def analyze_pattern(fail_positions, total_count, label="Global"):
+def analyse_pattern(fail_positions, total_count, label="Global"):
     print(f"\n{label} Failure Pattern Analysis:")
     if not fail_positions:
         print("  - No failures recorded.")
@@ -13,7 +13,7 @@ def analyze_pattern(fail_positions, total_count, label="Global"):
         print(f"  - Average gap between failures: {avg_gap:.2f} questions")
         print(f"  - Gaps sequence: {gaps}")
     else:
-        print("  - Only one failure, no gap pattern to analyze.")
+        print("  - Only one failure, no gap pattern to analyse.")
 
     third = total_count / 3.0
     early = sum(p <= third for p in fail_positions)
@@ -83,10 +83,10 @@ def get_scores(db):
 
     for category in category_order:
         result = category_results[category]
-        analyze_pattern(result["fail_positions"], result["total"] if result["total"] > 0 else 1, label=f"{category}")
+        analyse_pattern(result["fail_positions"], result["total"] if result["total"] > 0 else 1, label=f"{category}")
 
     print(f"\nGlobal Failure Positions (by order in dataset):")
     print(f"  {failure_positions}")
-    analyze_pattern(failure_positions, total_rows if total_rows > 0 else 1, label="Global")
+    analyse_pattern(failure_positions, total_rows if total_rows > 0 else 1, label="Global")
 
     return avg_score, dict(category_results), failure_positions
