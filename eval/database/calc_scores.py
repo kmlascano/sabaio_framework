@@ -23,7 +23,7 @@ def get_scores(db):
     
     avg_score = 1 - (sum(scores) / len(scores) if scores else 0.0)
     print(f"\nOverall deficiency Similarity Score: {avg_score:.2f}")
-    print("\nCategory Accuracy & Failure Positions:")
+    print(f"\nCategory Accuracy & Failure Positions:")
     for category, result in category_results.items():
         correct = result["correct"]
         total = result["total"]
@@ -33,7 +33,7 @@ def get_scores(db):
             print(f"    Failures at Q#: {result['fail_positions']}")
 
     if failure_positions:
-        print("\nGlobal Failure Positions (by order in dataset):")
+        print(f"\nGlobal Failure Positions (by order in dataset):")
         print(f"  {failure_positions}")
     
     return avg_score, dict(category_results), failure_positions

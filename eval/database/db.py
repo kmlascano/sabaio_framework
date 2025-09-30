@@ -1,5 +1,5 @@
 import sqlite3
-from static.vals import (DB_PATH)
+from .static.vals import (DB_PATH)
 import pandas as pd
 
 conn = sqlite3.connect(DB_PATH)

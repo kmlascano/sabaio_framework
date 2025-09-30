@@ -1,1 +1,1 @@
-DB_PATH = "data_sample/prompt_questions.db"
+DB_PATH = "eval/database/data_sample/prompt_questions.db"
