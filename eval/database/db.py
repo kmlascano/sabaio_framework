@@ -1,13 +1,23 @@
 import sqlite3
 from static.vals import (DB_PATH)
+import pandas as pd
 
 conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
+def ensure_category_column():
+    cursor.execute("PRAGMA table_info(qa_table)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if "category" not in columns:
+        cursor.execute("ALTER TABLE qa_table ADD COLUMN category TEXT")
+        conn.commit()
+
+ensure_category_column()
+
 def _reindex_ids():
     """Compact IDs to 1..N and reset AUTOINCREMENT."""
     rows = cursor.execute(
-        "SELECT question, answer, expected_answer FROM qa_table ORDER BY id"
+        "SELECT category, question, answer, expected_answer FROM qa_table ORDER BY id"
     ).fetchall()
 
     cursor.execute("DELETE FROM qa_table")
@@ -15,15 +25,15 @@ def _reindex_ids():
 
     if rows:
         cursor.executemany(
-            "INSERT INTO qa_table (question, answer, expected_answer) VALUES (?, ?, ?)",
+            "INSERT INTO qa_table (category, question, answer, expected_answer) VALUES (?, ?, ?, ?)",
             rows
         )
     conn.commit()
 
-def add_entry(question, answer, expected_answer):
+def add_entry(category, question, answer, expected_answer):
     cursor.execute(
-        "INSERT INTO qa_table (question, answer, expected_answer) VALUES (?, ?, ?)",
-        (question, answer, expected_answer)
+        "INSERT INTO qa_table (category, question, answer, expected_answer) VALUES (?, ?, ?, ?)",
+        (category, question, answer, expected_answer)
     )
     conn.commit()
     _reindex_ids()
@@ -53,3 +63,14 @@ def view_entries():
         print("(empty)")
     for r in rows:
         print(r)
+
+def add_df_entries(path):
+    df = pd.read_csv(path, encoding="utf-8")
+
+    for _, row in df.iterrows():
+        category = row[df.columns[0]]
+        question = row[df.columns[1]]
+        answer = row[df.columns[2]]
+        expected_answer = row[df.columns[3]]
+
+        add_entry(category, question, answer, expected_answer)
