@@ -1,34 +1,35 @@
 from difflib import SequenceMatcher
 from collections import defaultdict
 
-def analyse_pattern(fail_positions, total_count, label="Global"):
-    print(f"\n{label} Failure Pattern Analysis:")
+def analyse_pattern(fail_positions, total_count):
+    """Analyse failure positions within a sequence."""
     if not fail_positions:
-        print("  - No failures recorded.")
-        return
+        return {
+            "avg_gap": None,
+            "gaps": [],
+            "region": None,
+            "longest_streak": 0
+        }
 
     gaps = [j - i for i, j in zip(fail_positions, fail_positions[1:])]
-    if gaps:
-        avg_gap = sum(gaps) / len(gaps)
-        print(f"  - Average gap between failures: {avg_gap:.2f} questions")
-        print(f"  - Gaps sequence: {gaps}")
-    else:
-        print("  - Only one failure, no gap pattern to analyse.")
+    avg_gap = sum(gaps) / len(gaps) if gaps else None
 
+    # Identify where the errors are concentrated
     third = total_count / 3.0
-    early = sum(p <= third for p in fail_positions)
-    middle = sum(third < p <= 2 * third for p in fail_positions)
-    late = sum(p > 2 * third for p in fail_positions)
+    counts = {
+        "beginning": sum(p <= third for p in fail_positions),
+        "middle": sum(third < p <= 2 * third for p in fail_positions),
+        "end": sum(p > 2 * third for p in fail_positions),
+    }
+
+    dominant_region, dominant_count = max(counts.items(), key=lambda kv: kv[1])
     total_f = len(fail_positions)
+    region = (
+        dominant_region if total_f and dominant_count / total_f >= 0.6
+        else "spread"
+    )
 
-    parts = {"beginning": early, "middle": middle, "end": late}
-    dominant_region, dominant_count = max(parts.items(), key=lambda kv: kv[1])
-    if total_f and dominant_count / total_f >= 0.6:
-        region_text = f"mostly at the {dominant_region}"
-    else:
-        region_text = "spread throughout"
-    print(f"  - Failures are {region_text} of the dataset")
-
+    # Longest consecutive streak
     longest_streak = 1
     current = 1
     for g in gaps:
@@ -37,26 +38,36 @@ def analyse_pattern(fail_positions, total_count, label="Global"):
             longest_streak = max(longest_streak, current)
         else:
             current = 1
-    if total_f > 1:
-        print(f"  - Longest consecutive-failure streak: {longest_streak}")
+
+    return {
+        "avg_gap": avg_gap,
+        "gaps": gaps,
+        "region": region,
+        "longest_streak": longest_streak,
+    }
 
 
 def get_scores(db):
+    """Compute scores and failure patterns from QA table."""
     scores = []
     category_results = defaultdict(lambda: {"correct": 0, "total": 0, "fail_positions": []})
     failure_positions = []
     total_rows = 0
 
-    category_order = []
-    for row in db.cursor.execute("SELECT DISTINCT category, MIN(id) FROM qa_table GROUP BY category ORDER BY MIN(id)"):
-        category_order.append(row[0])
-        _ = category_results[row[0]]
+    # Preserve category order
+    category_order = [
+        row[0] for row in db.cursor.execute(
+            "SELECT DISTINCT category, MIN(id) "
+            "FROM qa_table GROUP BY category ORDER BY MIN(id)"
+        )
+    ]
 
+    # Process dataset
     for idx, row in enumerate(db.cursor.execute("SELECT * FROM qa_table ORDER BY id"), start=1):
         total_rows = idx
-        id_, question, answer, expected, category = row
-        answer = answer or ""
-        expected = expected or ""
+        _, _, answer, expected, category = row
+        answer, expected = answer or "", expected or ""
+
         ratio = SequenceMatcher(None, answer, expected).ratio()
         scores.append(ratio)
 
@@ -69,24 +80,29 @@ def get_scores(db):
 
         category_results[category]["total"] += 1
 
-    avg_score = 1 - (sum(scores) / len(scores) if scores else 0.0)
-    print(f"\nOverall deficiency Similarity Score: {avg_score:.2f}")
+    avg_deficiency = 1 - (sum(scores) / len(scores) if scores else 0.0)
 
-    print(f"\nCategory Accuracy & Failure Positions:")
+    # Summarize results
+    summary = {
+        "overall_deficiency": avg_deficiency,
+        "categories": {},
+        "global_failures": failure_positions,
+    }
+
     for category in category_order:
         result = category_results[category]
-        correct = result["correct"]
         total = result["total"]
-        accuracy = correct / total if total > 0 else 0.0
-        print(f"  {category}: {correct}/{total} correct ({accuracy:.2%})")
-        print(f"    Failures at Q#: {result['fail_positions']}")
+        accuracy = result["correct"] / total if total else 0.0
+        pattern = analyse_pattern(result["fail_positions"], total or 1)
 
-    for category in category_order:
-        result = category_results[category]
-        analyse_pattern(result["fail_positions"], result["total"] if result["total"] > 0 else 1, label=f"{category}")
+        summary["categories"][category] = {
+            "accuracy": accuracy,
+            "correct": result["correct"],
+            "total": total,
+            "fail_positions": result["fail_positions"],
+            "pattern": pattern,
+        }
 
-    print(f"\nGlobal Failure Positions (by order in dataset):")
-    print(f"  {failure_positions}")
-    analyse_pattern(failure_positions, total_rows if total_rows > 0 else 1, label="Global")
+    summary["global_pattern"] = analyse_pattern(failure_positions, total_rows or 1)
 
-    return avg_score, dict(category_results), failure_positions
+    return summary
