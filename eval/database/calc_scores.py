@@ -1,9 +1,6 @@
 import sqlite3
 from collections import defaultdict
 
-# ==========================================================
-# Pattern analysis — EXACTLY your version
-# ==========================================================
 def analyse_pattern(fail_positions, total_count):
     if not fail_positions:
         return {"avg_gap": None, "gaps": [], "region": None, "longest_streak": 0}
@@ -40,10 +37,6 @@ def analyse_pattern(fail_positions, total_count):
         "longest_streak": longest_streak,
     }
 
-
-# ==========================================================
-# Binary normalization helper
-# ==========================================================
 def normalize_binary(value):
     """Normalize any binary-like input to 0/1 or None."""
     if value is None:
@@ -61,9 +54,6 @@ def normalize_binary(value):
     return None
 
 
-# ==========================================================
-# Main scoring & report
-# ==========================================================
 def get_eval_scores(db):
     """Read eval_table, compute per-category accuracy and print formatted report."""
     # ---- Connect to DB ----
@@ -74,17 +64,13 @@ def get_eval_scores(db):
     else:
         conn, cursor = db.get_conn_cursor()
         close_after = True
-
-    # ---- Ensure table exists ----
     cursor.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='eval_table';"
     )
     if not cursor.fetchone():
         if close_after:
             conn.close()
-        raise RuntimeError("❌ Table 'eval_table' not found in database.")
-
-    # ---- Read data ----
+        raise RuntimeError("Table 'eval_table' not found in database.")
     records = []
     for row in cursor.execute(
         "SELECT id, prompt, gold_binary, llm_binary, category FROM eval_table ORDER BY id"
@@ -102,7 +88,6 @@ def get_eval_scores(db):
         print("⚠️ No data found in eval_table.")
         return
 
-    # ---- Aggregate by category ----
     cat_stats = defaultdict(lambda: {"total": 0, "correct": 0, "fails": []})
     all_fails = []
     total_count = len(records)
@@ -117,8 +102,6 @@ def get_eval_scores(db):
             all_fails.append(idx)
         if match:
             total_correct += 1
-
-    # ---- Compute global metrics ----
     overall_accuracy = total_correct / total_count if total_count else 0.0
     deficiency_score = 1 - overall_accuracy
 
@@ -132,7 +115,6 @@ def get_eval_scores(db):
         print(f"  {cat}: {correct}/{total} correct ({acc:.2f}%)")
         print(f"    Failures at Q#: {fails if fails else 'None'}")
 
-    # ---- Per-category pattern analysis ----
     for cat, stats in cat_stats.items():
         fails = stats["fails"]
         total = stats["total"]
@@ -157,7 +139,6 @@ def get_eval_scores(db):
         print(f"  - Failures are mostly at the {region} of the dataset")
         print(f"  - Longest consecutive-failure streak: {pattern['longest_streak']}")
 
-    # ---- Global analysis ----
     print("\nGlobal Failure Positions (by order in dataset):")
     print(f"  {all_fails if all_fails else 'None'}")
 
