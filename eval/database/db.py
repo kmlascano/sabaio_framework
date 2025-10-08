@@ -6,7 +6,7 @@ import os
 from .static.vals import DB_PATH
 
 # temporary 'categoriser' model using SpaCy similarity
-# (in future, replace with a proper classifier)
+# future classifier would be through manually labeled data 
 nlp = spacy.load("en_core_web_lg")
 CANDIDATE_LABELS = [
     "contract law", "tort law", "property law", "trust law", "family law",

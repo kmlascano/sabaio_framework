@@ -85,7 +85,7 @@ def get_eval_scores(db):
         conn.close()
 
     if not records:
-        print("⚠️ No data found in eval_table.")
+        print("No data found in eval_table.")
         return
 
     cat_stats = defaultdict(lambda: {"total": 0, "correct": 0, "fails": []})
